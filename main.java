@@ -1,228 +1,207 @@
-import java.io.*;
-import java.util.*;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+// import java.util.Arrays;
 
-/**
- * Represents a User with a username and password.
- */
-class User {
-    private String username;
-    private String password;
+public class User_Authentication extends JFrame implements ActionListener {
+    // --- UI Components ---
+    private JLabel usernameLabel, passwordLabel;
+    private JTextField usernameField;
+    private JPasswordField passwordField; // Used for secure password entry
+    private JButton registerButton, loginButton, viewUsersButton, deleteUserButton, clearButton, exitButton;
+    private JPanel panel;
 
-    /**
-     * Constructs a new User.
-     *
-     * @param username the username
-     * @param password the password (plain text or hashed)
-     */
-    public User(String username, String password) {
-        this.username = username;
-        this.password = password;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
+    // --- Data Storage ---
+    // ArrayList to store user data: [username, password]
+    private ArrayList<String[]> users = new ArrayList<>();
 
     /**
-     * Converts user to a file-storable format.
+     * Constructor for the User Authentication system.
      */
-    public String toFileString() {
-        return username + "," + password;
+    public User_Authentication() {
+        // --- Window Setup ---
+        setTitle("User Authentication System");
+        setSize(450, 250); // Adjusted size for fewer components
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLocationRelativeTo(null); // Center the window
+
+        // --- Component Initialization ---
+        usernameLabel = new JLabel("Username:");
+        passwordLabel = new JLabel("Password:");
+        usernameField = new JTextField(20);
+        passwordField = new JPasswordField(20);
+
+        // --- Button Creation ---
+        registerButton = createButton("Register");
+        loginButton = createButton("Login");
+        viewUsersButton = createButton("View Users");
+        deleteUserButton = createButton("Delete User");
+        clearButton = createButton("Clear");
+        exitButton = createButton("Exit");
+
+        // --- Panel and Layout ---
+        // Using a 4x2 grid for a cleaner layout
+        panel = new JPanel(new GridLayout(5, 2, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Add components to the panel
+        panel.add(usernameLabel);
+        panel.add(usernameField);
+        panel.add(passwordLabel);
+        panel.add(passwordField);
+
+        panel.add(registerButton);
+        panel.add(loginButton);
+        panel.add(viewUsersButton);
+        panel.add(deleteUserButton);
+        panel.add(clearButton);
+        panel.add(exitButton);
+
+        // Add the panel to the frame
+        add(panel);
+        setVisible(true);
     }
 
     /**
-     * Parses a User from a file line.
+     * Helper method to create and add an action listener to a button.
      */
-    public static User fromFileString(String line) {
-        String[] parts = line.split(",");
-        return new User(parts[0], parts[1]);
+    private JButton createButton(String text) {
+        JButton button = new JButton(text);
+        button.addActionListener(this);
+        return button;
     }
-}
-
-
-/**
- * Handles file read/write operations for User data.
- */
-class FileUtil {
-    private static final String FILE_NAME = "users.txt";
 
     /**
-     * Reads users from the file.
+     * Handles all button click events.
      */
-    public static List<User> readUsers() {
-        List<User> users = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(FILE_NAME))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                users.add(User.fromFileString(line));
+    public void actionPerformed(ActionEvent e) {
+        try {
+            if (e.getSource() == registerButton) {
+                registerUser();
+            } else if (e.getSource() == loginButton) {
+                loginUser();
+            } else if (e.getSource() == viewUsersButton) {
+                viewUsers();
+            } else if (e.getSource() == deleteUserButton) {
+                deleteUser();
+            } else if (e.getSource() == clearButton) {
+                clearFields();
+            } else if (e.getSource() == exitButton) {
+                System.exit(0);
             }
-        } catch (IOException e) {
-            // File might not exist yet
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "An unexpected error occurred: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
-        return users;
-    }
-
-    /**
-     * Writes users to the file.
-     */
-    public static void writeUsers(List<User> users) {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_NAME))) {
-            for (User user : users) {
-                bw.write(user.toFileString());
-                bw.newLine();
-            }
-        } catch (IOException e) {
-            System.out.println("Error writing to file.");
-        }
-    }
-}
-
-
-/**
- * Provides business logic for user operations.
- */
-class UserService {
-    private List<User> users;
-
-    public UserService() {
-        users = FileUtil.readUsers();
     }
 
     /**
      * Registers a new user.
      */
-    public boolean register(String username, String password) {
-        if (getUserByUsername(username) != null) return false;
-        users.add(new User(username, password));
-        FileUtil.writeUsers(users);
-        return true;
-    }
-
-    /**
-     * Validates user credentials.
-     */
-    public boolean login(String username, String password) {
-        User user = getUserByUsername(username);
-        return user != null && user.getPassword().equals(password);
-    }
-
-    /**
-     * Deletes a user by username.
-     */
-    public boolean deleteUser(String username) {
-        User user = getUserByUsername(username);
-        if (user != null) {
-            users.remove(user);
-            FileUtil.writeUsers(users);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Displays all usernames.
-     */
-    public void listUsers() {
-        for (User user : users) {
-            System.out.println("Username: " + user.getUsername());
-        }
-    }
-
-    private User getUserByUsername(String username) {
-        for (User user : users) {
-            if (user.getUsername().equals(username)) return user;
-        }
-        return null;
-    }
-}
-
-
-/**
- * Controls user interaction and input handling.
- */
-class AuthController {
-    private UserService userService = new UserService();
-    private Scanner scanner = new Scanner(System.in);
-
-    /**
-     * Starts the authentication system.
-     */
-    public void start() {
-        while (true) {
-            System.out.println("\n=== USER AUTH SYSTEM ===");
-            System.out.println("1. Register");
-            System.out.println("2. Login");
-            System.out.println("3. Delete User");
-            System.out.println("4. List Users");
-            System.out.println("5. Exit");
-            System.out.print("Choose an option: ");
-
-            String choice = scanner.nextLine();
-
-            switch (choice) {
-                case "1": register(); break;
-                case "2": login(); break;
-                case "3": deleteUser(); break;
-                case "4": userService.listUsers(); break;
-                case "5": System.out.println("Goodbye!"); return;
-                default: System.out.println("Invalid choice. Try again.");
-            }
-        }
-    }
-
-    private void register() {
-        System.out.print("Enter new username: ");
-        String username = scanner.nextLine().trim();
-        System.out.print("Enter new password: ");
-        String password = scanner.nextLine().trim();
+    private void registerUser() {
+        String username = usernameField.getText().trim();
+        String password = new String(passwordField.getPassword()).trim();
 
         if (username.isEmpty() || password.isEmpty()) {
-            System.out.println("Username and password cannot be empty.");
+            showMessage("Username and password cannot be empty!");
             return;
         }
 
-        if (userService.register(username, password)) {
-            System.out.println("User registered successfully.");
-        } else {
-            System.out.println("Username already exists.");
+        // Check if user already exists
+        for (String[] user : users) {
+            if (user[0].equalsIgnoreCase(username)) {
+                showMessage("Username already exists. Please choose another.");
+                return;
+            }
         }
+
+        users.add(new String[]{username, password});
+        showMessage("User registered successfully!");
+        clearFields();
     }
 
-    private void login() {
-        System.out.print("Enter username: ");
-        String username = scanner.nextLine().trim();
-        System.out.print("Enter password: ");
-        String password = scanner.nextLine().trim();
+    /**
+     * Logs a user in.
+     */
+    private void loginUser() {
+        String username = usernameField.getText().trim();
+        String password = new String(passwordField.getPassword()).trim();
 
-        if (userService.login(username, password)) {
-            System.out.println("Login successful!");
-        } else {
-            System.out.println("Invalid credentials.");
+        for (String[] user : users) {
+            if (user[0].equalsIgnoreCase(username) && user[1].equals(password)) {
+                showMessage("Login successful! Welcome, " + username + ".");
+                clearFields();
+                return;
+            }
         }
+
+        showMessage("Invalid username or password.");
     }
 
+    /**
+     * Displays a list of all registered usernames.
+     */
+    private void viewUsers() {
+        if (users.isEmpty()) {
+            showMessage("No users are registered yet.");
+            return;
+        }
+        
+        String[] columns = {"Registered Usernames"};
+        Object[][] data = new Object[users.size()][1];
+        for (int i = 0; i < users.size(); i++) {
+            data[i][0] = users.get(i)[0]; // Only show username, not password
+        }
+        
+        JTable table = new JTable(data, columns);
+        showTable(table, "Registered Users");
+    }
+
+    /**
+     * Deletes a user.
+     */
     private void deleteUser() {
-        System.out.print("Enter username to delete: ");
-        String username = scanner.nextLine().trim();
+        String usernameToDelete = JOptionPane.showInputDialog(this, "Enter username to delete:");
+        if (usernameToDelete == null || usernameToDelete.trim().isEmpty()) {
+            return; // User cancelled or entered nothing
+        }
 
-        if (userService.deleteUser(username)) {
-            System.out.println("User deleted.");
+        boolean removed = users.removeIf(user -> user[0].equalsIgnoreCase(usernameToDelete.trim()));
+
+        if (removed) {
+            showMessage("User '" + usernameToDelete + "' deleted successfully.");
         } else {
-            System.out.println("User not found.");
+            showMessage("User '" + usernameToDelete + "' not found.");
         }
     }
-}
 
+    /**
+     * Clears the input fields.
+     */
+    private void clearFields() {
+        usernameField.setText("");
+        passwordField.setText("");
+    }
+    
+    /**
+     * Helper method to show a simple message dialog.
+     */
+    private void showMessage(String message) {
+        JOptionPane.showMessageDialog(this, message);
+    }
 
-/**
- * Entry point of the application.
- */
-public class AuthApp {
+    /**
+     * Helper method to show data in a JTable within a dialog.
+     */
+    private void showTable(JTable table, String title) {
+        JOptionPane.showMessageDialog(this, new JScrollPane(table), title, JOptionPane.PLAIN_MESSAGE);
+    }
+
+    /**
+     * Main method to run the application.
+     */
     public static void main(String[] args) {
-        new AuthController().start();
+        new User_Authentication();
     }
 }
